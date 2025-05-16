@@ -23,13 +23,24 @@ class Scene:
     
     def add_game_object(self, game_object) -> None:
         """
-        Adds game object to scene.
+        Adds GameObject to scene.
 
         Args:
-            game_object (Any): GameObject instance or inherited instance from GameObject.
+            game_object (GameObject): GameObject instance or inherited instance from GameObject.
         """
 
         self.__game_objects.append(game_object)
+    
+    def remove_game_object(self, game_object) -> None:
+        """
+        Removes GameObject from scene.
+
+        Args:
+            game_object (GameObject): GameObject to remove.
+        """
+
+        if game_object in self.__game_objects:
+            self.__game_objects.remove(game_object)
     
     def get_all_game_objects(self) -> list:
         """
@@ -57,6 +68,17 @@ class Scene:
             screen (display): Pygame screen.
             window_size (tuple[int]): Size of Pygame window.
         """
+
+        to_remove_game_objects: list = []
+
+        for game_object in self.__game_objects:
+            if not game_object._remove:
+                continue
+
+            to_remove_game_objects.append(game_object)
+
+        for to_remove_game_object in to_remove_game_objects:
+            self.__game_objects.remove(to_remove_game_object)
 
         if not self.camera:
             screen.fill((0, 0, 0))

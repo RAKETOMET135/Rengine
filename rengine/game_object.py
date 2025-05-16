@@ -21,6 +21,17 @@ class GameObject:
         self.y = y
         self.width = width
         self.height = height
+
+        self._remove = False
     
     def add_to_scene(self, scene: Scene) -> None:
         scene.add_game_object(self)
+    
+    def destroy(self) -> None:
+        """
+        Destroys the GameObject in next game loop cycle.
+        
+        To remove GameObject from memory make the reference None or use del.
+        """
+
+        self._remove = True

@@ -1,3 +1,4 @@
+from __future__ import annotations
 import pygame
 from .game_object import GameObject
 from .scene import Scene
@@ -18,15 +19,21 @@ class Image(GameObject):
         self.image_path = image_path
         self.image = pygame.image.load(self.image_path)
         self.rect = self.image.get_rect()
+        self.__root_width = width
+        self.__root_height = height
 
         super().__init__(x, y, self.rect.width, self.rect.height)
 
         if width and not height:
             self.image = pygame.transform.scale(self.image, (width, self.rect.height))
+            self.width = width
         elif height and not width:
             self.image = pygame.transform.scale(self.image, (self.rect.width, height))
+            self.height = height
         elif width and height:
             self.image = pygame.transform.scale(self.image, (width, height))
+            self.width = width
+            self.height = height
         
         self.rect = self.image.get_rect()
         self.rect.topleft = (x, y)
@@ -57,7 +64,7 @@ class Image(GameObject):
 
         screen.blit(self.image, self.rect)
     
-    def add_to_scene(self, scene: Scene):
+    def add_to_scene(self, scene: Scene) -> None:
         """
         Adds this GameObject to scene.
 
@@ -66,3 +73,25 @@ class Image(GameObject):
         """
 
         return super().add_to_scene(scene)
+    
+    def sprite_sheet_cut(self, cut_width: int, cut_height: int, x: int, y: int, color_key: tuple[int] = (0, 0, 0)) -> None:
+        """
+        Cuts the image into smaller part. Can be used for sprite sheets.
+
+        Args:
+            cut_width (int): Cut width.
+            cut_height (int): Cut height.
+            x (int): Row.
+            y (int): Column.
+            color_key (tuple[int]): Color that becomes transparent. Set to None to disable.
+        """
+
+        image: pygame.Surface = pygame.Surface((cut_width, cut_height))
+        image.blit(pygame.image.load(self.image_path), (0, 0), ((x * cut_width), (y * cut_height), cut_width, cut_height))
+
+        if color_key:
+            image.set_colorkey(color_key)
+        
+        image = pygame.transform.scale(image, (self.__root_width, self.__root_height))
+
+        self.image = image

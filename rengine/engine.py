@@ -1,6 +1,7 @@
 from typing import Callable, Optional
 from .scene import Scene
 from .player_controls import PlayerControls
+from .input import Input
 import pygame
 
 class Rengine:
@@ -130,10 +131,14 @@ class Rengine:
             delta_time: float = self.clock.tick(self.frames_per_second) / 1000
             pressed_keys: pygame.key.ScancodeWrapper = pygame.key.get_pressed()
 
-            for event in pygame.event.get():
+            events: list[pygame.event.Event] = pygame.event.get()
+
+            for event in events:
                 if event.type == pygame.QUIT:
                     self.running = False
-            
+
+            Input._update_input(events, pressed_keys)
+
             if self.update_function:
                 self.update_function(delta_time, self.__get_pressed_keys_list(pressed_keys))
             

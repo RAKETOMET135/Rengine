@@ -15,12 +15,21 @@ player_controls: rengine.PlayerControls = rengine.PlayerControls(rectangle, reng
 camera.set_pivot(rectangle)
 
 # Creation of an image
-image: rengine.Image = rengine.Image("paint-brush.png", 250, 50, 50, 50)
+image: rengine.Image = rengine.Image("assets/spritesheet.png", 250, 50, 100, 100)
+image.sprite_sheet_cut(16, 16, 0, 0)
 image.add_to_scene(main_scene)
 
 # Update method that runs every render, needs to be given to game instance (update_function=update)
 def update(delta_time: float, pressed_keys: list[str]) -> None:
-    pass
+    global image
+
+    if image:
+        if rengine.Collision.is_collision(rectangle, image):
+            image.destroy()
+            image = None
+    
+    if rengine.Input.is_key_click("r"):
+        print("r")
 
 # Creation of game instance
 engine: rengine.Rengine = rengine.Rengine(update_function=update, frames_per_second=120)

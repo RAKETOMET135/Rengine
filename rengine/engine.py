@@ -26,6 +26,19 @@ class Rengine:
         self.current_scene = ""
         self.frames_per_second = frames_per_second
         self.player_controls = []
+        self.screen_width = width
+        self.screen_height = height
+        self.screen_title = title
+
+    def get_window_size(self) -> tuple[int]:
+        """
+        Returns the size of the Pygame window.
+
+        Returns:
+            tuple[int]: Pygame window size.
+        """
+
+        return (self.screen_width, self.screen_height)
     
     def add_scene(self, scene: Scene) -> None:
         """
@@ -121,8 +134,6 @@ class Rengine:
                 if event.type == pygame.QUIT:
                     self.running = False
             
-            self.screen.fill((0, 0, 0))
-
             if self.update_function:
                 self.update_function(delta_time, self.__get_pressed_keys_list(pressed_keys))
             
@@ -130,9 +141,7 @@ class Rengine:
                 player_controls.update(pressed_keys, delta_time)
 
             if self.current_scene:
-                for game_object in self.current_scene.get_all_game_objects():
-                    if hasattr(game_object, "render") and callable(getattr(game_object, "render")):
-                        game_object.render(self.screen)
+                self.current_scene.render(self.screen, (self.screen_width, self.screen_height))
 
             pygame.display.update()
 

@@ -1,4 +1,5 @@
 import pygame
+from .camera import Camera
 
 class Scene:
     current_id = 0
@@ -16,6 +17,7 @@ class Scene:
         Scene.current_id += 1
         self.scene_name = scene_name
         Scene.scenes.append(self)
+        self.camera = None
 
         self.__game_objects = []
     
@@ -38,6 +40,46 @@ class Scene:
         """
         
         return self.__game_objects
+    
+    def set_camera(self, camera: Camera) -> None:
+        """
+        Sets the camera that is used to render scene.
+        """
 
-    def render(screen: pygame.display) -> None:
-        pass
+        camera.scene = self
+        self.camera = camera
+
+    def render(self, screen: pygame.display, window_size: tuple[int]) -> None:
+        """
+        Renders the scene. Called by Rengine.
+
+        Args:
+            screen (display): Pygame screen.
+            window_size (tuple[int]): Size of Pygame window.
+        """
+
+        if not self.camera:
+            screen.fill((0, 0, 0))
+
+            for game_object in self.__game_objects:
+                if hasattr(game_object, "render") and callable(getattr(game_object, "render")):
+                    game_object.render(screen, (game_object.x, game_object.y))
+        else:
+            self.camera._update_position_pivot(window_size)
+
+            if not self.camera.background_image:
+                screen.fill(self.camera.background_color)
+            else:
+                if self.camera.background_image.width == 0:
+                    self.camera._resize_background_image(window_size)
+                
+                self.camera.background_image.render(screen, (0, 0))
+
+            for game_object in self.__game_objects:
+                if hasattr(game_object, "render") and callable(getattr(game_object, "render")):
+                    in_bounds: bool = self.camera.is_game_object_in_bounds(game_object, window_size)
+
+                    if not in_bounds:
+                        continue
+
+                    game_object.render(screen, self.camera.get_game_object_position(game_object))

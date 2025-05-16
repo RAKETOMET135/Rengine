@@ -21,25 +21,39 @@ class Image(GameObject):
 
         super().__init__(x, y, self.rect.width, self.rect.height)
 
-        if self.width and not self.height:
+        if width and not height:
             self.image = pygame.transform.scale(self.image, (width, self.rect.height))
-        elif self.height and not self.width:
+        elif height and not width:
             self.image = pygame.transform.scale(self.image, (self.rect.width, height))
-        elif self.width and self.height:
+        elif width and height:
             self.image = pygame.transform.scale(self.image, (width, height))
         
         self.rect = self.image.get_rect()
         self.rect.topleft = (x, y)
     
-    def render(self, screen: pygame.display) -> None:
+    def resize_image(self, width: int, height: int) -> None:
+        """
+        Resizes the image to new width and height.
+
+        Args:
+            width (int): New image width.
+            height (int): New image height.
+        """
+
+        self.image = pygame.transform.scale(self.image, (width, height))
+        self.rect = self.image.get_rect()
+        self.rect.topleft = (self.x, self.y)
+    
+    def render(self, screen: pygame.display, camera_object_position: tuple[int]) -> None:
         """
         Renders the GameObject on screen. Called automatically by Rengine.
 
         Args:
             screen (display): Current game instance's screen.
+            camera_object_position (tuple[int]): Position in scene based on camera position.
         """
 
-        self.rect.topleft = (self.x, self.y)
+        self.rect.topleft = camera_object_position
 
         screen.blit(self.image, self.rect)
     

@@ -21,15 +21,16 @@ class Rectangle(GameObject):
 
         self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
     
-    def render(self, screen: pygame.display) -> None:
+    def render(self, screen: pygame.display, camera_object_position: tuple[int]) -> None:
         """
         Renders the GameObject on screen. Called automatically by Rengine.
 
         Args:
             screen (display): Current game instance's screen.
+            camera_object_position (tuple[int]): Position in scene based on camera position.
         """
 
-        self.rect.topleft = (self.x, self.y)
+        self.rect.topleft = camera_object_position
 
         pygame.draw.rect(screen, self.color, self.rect)
     

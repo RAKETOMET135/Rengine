@@ -21,6 +21,8 @@ class Image(GameObject):
         self.rect = self.image.get_rect()
         self.__root_width = width
         self.__root_height = height
+        self._animator = None
+        self._default_image = self.image
 
         super().__init__(x, y, self.rect.width, self.rect.height)
 
@@ -38,6 +40,20 @@ class Image(GameObject):
         self.rect = self.image.get_rect()
         self.rect.topleft = (x, y)
     
+    def change_image(self, image_path: str) -> None:
+        """
+        Changes the image to new image on image_path.
+
+        Args:
+            image_path (str): Path to new image.
+        """
+
+        image: pygame.Surface = pygame.image.load(image_path)
+        image = pygame.transform.scale(image, (self.width, self.height))
+        self.image = image
+        self.image_path = image_path
+        self._default_image = self.image
+
     def resize_image(self, width: int, height: int) -> None:
         """
         Resizes the image to new width and height.
@@ -50,6 +66,9 @@ class Image(GameObject):
         self.image = pygame.transform.scale(self.image, (width, height))
         self.rect = self.image.get_rect()
         self.rect.topleft = (self.x, self.y)
+        self.__root_width = width
+        self.__root_height = height
+        self._default_image = self.image
     
     def render(self, screen: pygame.display, camera_object_position: tuple[int]) -> None:
         """
@@ -95,3 +114,4 @@ class Image(GameObject):
         image = pygame.transform.scale(image, (self.__root_width, self.__root_height))
 
         self.image = image
+        self._default_image = self.image

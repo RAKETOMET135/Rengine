@@ -60,18 +60,39 @@ class Scene:
         camera.scene = self
         self.camera = camera
 
-    def render(self, screen: pygame.display, window_size: tuple[int]) -> None:
+    def render(self, screen: pygame.display, window_size: tuple[int], delta_time: float) -> None:
         """
         Renders the scene. Called by Rengine.
 
         Args:
             screen (display): Pygame screen.
             window_size (tuple[int]): Size of Pygame window.
+            delta_time (float): The time from last frame.
         """
 
         to_remove_game_objects: list = []
 
         for game_object in self.__game_objects:
+            if hasattr(game_object, "_animator"):
+                if game_object._animator and game_object._animator.current_track:
+                    animator = game_object._animator
+                    animator._track_time += delta_time
+
+                    is_stopped: bool = False
+
+                    if animator._track_time >= animator.current_track.length:
+                        if not animator.current_track.looped:
+                            animator.stop(animator.current_track)
+                            is_stopped = True
+                        else:
+                            animator._track_time = delta_time
+                    
+                    if not is_stopped:
+                        length_per_frame: float = animator.current_track.length / len(animator.current_track.images)
+                        current_animation_frame: int = int(animator._track_time / length_per_frame)
+
+                        game_object.image = animator._track_images[current_animation_frame]
+
             if not game_object._remove:
                 continue
 

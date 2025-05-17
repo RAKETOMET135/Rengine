@@ -25,8 +25,15 @@ class Input:
     _rmb_h: bool = False
     _sumb_h: bool = False
     _sdmb_h: bool = False
-    _key_downs: list[str] = []
-    _key_ups: list[str] = []
+    _lmb_d_h: bool = False
+    _mmb_d_h: bool = False
+    _rmb_d_h: bool = False
+    _sumb_d_h: bool = False
+    _sdmb_d_h: bool = False
+    _key_downs: list = []
+    _key_ups: list = []
+    _key_downs_h: list = []
+    _key_clicks: list = []
     
     @classmethod
     def is_left_mouse_button_down(cls) -> bool:
@@ -300,7 +307,7 @@ class Input:
         """
 
         key_ord: int = ord(key_string)
-        is_clicked: bool = key_ord in cls._key_ups
+        is_clicked: bool = key_ord in cls._key_clicks
 
         return is_clicked
 
@@ -327,46 +334,77 @@ class Input:
         cls._sdmb_c = False
         cls._key_downs = []
         cls._key_ups = []
+        cls._key_clicks = []
 
         for event in cls._events:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
                     cls._lmb_d = True
                     cls._lmb_h = True
+                    cls._lmb_d_h = True
                 elif event.button == 2:
                     cls._mmb_d = True
                     cls._mmb_h = True
+                    cls._mmb_d_h = True
                 elif event.button == 3:
                     cls._rmb_d = True
                     cls._rmb_h = True
+                    cls._rmb_d_h = True
                 elif event.button == 4:
                     cls._sumb_d = True
                     cls._sumb_h = True
+                    cls._sumb_d_h = True
                 elif event.button == 5:
                     cls._sdmb_d = True
                     cls._sdmb_h = True
+                    cls._sdmb_d_h = True
             elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1:
                     cls._lmb_h = False
-                    cls._lmb_c = True
                     cls._lmb_u = True
+
+                    if cls._lmb_d_h:
+                        cls._lmb_c = True
+                    
+                    cls._lmb_d_h = False
                 elif event.button == 2:
                     cls._mmb_h = False
-                    cls._mmb_c = True
                     cls._mmb_u = True
+
+                    if cls._mmb_d_h:
+                        cls._mmb_c = True
+                    
+                    cls._mmb_d_h = False
                 elif event.button == 3:
                     cls._rmb_h = False
-                    cls._rmb_c = True
                     cls._rmb_u = True
+
+                    if cls._rmb_d_h:
+                        cls._rmb_c = True
+                    
+                    cls._rmb_d_h = False
                 elif event.button == 4:
                     cls._sumb_h = False
-                    cls._sumb_c = True
                     cls._sumb_u = True
+
+                    if cls._sumb_d_h:
+                        cls._sumb_c = True
+                    
+                    cls._sumb_d_h = False
                 elif event.button == 5:
                     cls._sdmb_h = False
-                    cls._sdmb_c = True
                     cls._sdmb_u = True
+
+                    if cls._sdmb_d_h:
+                        cls._sdmb_c = True
+                    
+                    cls._sdmb_d_h = False
             elif event.type == pygame.KEYDOWN:
                 cls._key_downs.append(event.key)
+                cls._key_downs_h.append(event.key)
             elif event.type == pygame.KEYUP:
                 cls._key_ups.append(event.key)
+                
+                if event.key in cls._key_downs_h:
+                    cls._key_clicks.append(event.key)
+                    cls._key_downs_h.remove(event.key)

@@ -140,17 +140,15 @@ class Rengine:
             Input._update_input(events, pressed_keys)
 
             if self.update_function:
-                self.update_function(delta_time, self.__get_pressed_keys_list(pressed_keys))
+                self.update_function(delta_time)
             
             for player_controls in self.player_controls:
                 player_controls.update(pressed_keys, delta_time)
 
             if self.current_scene:
-                self.current_scene.render(self.screen, (self.screen_width, self.screen_height))
+                self.current_scene.render(self.screen, (self.screen_width, self.screen_height), delta_time)
 
             pygame.display.update()
-
-
         
         pygame.quit()
     

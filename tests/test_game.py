@@ -7,6 +7,7 @@ player: rengine.Image = rengine.Image("assets/character_spritesheet.png", width=
 player.sprite_sheet_cut(15, 16, 0, 0)
 player.add_to_scene(main_scene)
 player_controls: rengine.PlayerControls = rengine.PlayerControls(player, rengine.MovementType.COMBINED)
+main_scene.add_player_controls(player_controls)
 
 walk_animation_down: rengine.ImageAnimationTrack = rengine.ImageAnimationTrack([], 0.4, True)
 walk_animation_down.use_with_sprite_sheet("assets/character_spritesheet.png")
@@ -32,6 +33,5 @@ main_scene_camera.set_pivot(player)
 
 game: rengine.Rengine = rengine.Rengine(frames_per_second=120)
 game.add_scene(main_scene)
-game.add_player_controls(player_controls)
 
 game.run()

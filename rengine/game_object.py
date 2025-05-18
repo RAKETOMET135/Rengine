@@ -21,6 +21,7 @@ class GameObject:
         self.y = y
         self.width = width
         self.height = height
+        self.hidden = False
 
         self._remove = False
     

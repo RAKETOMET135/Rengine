@@ -18,8 +18,10 @@ class Scene:
         self.scene_name = scene_name
         Scene.scenes.append(self)
         self.camera = None
+        self.gui = None
 
         self.__game_objects = []
+        self.__player_controls = []
     
     def add_game_object(self, game_object) -> None:
         """
@@ -59,8 +61,18 @@ class Scene:
 
         camera.scene = self
         self.camera = camera
+    
+    def add_player_controls(self, player_controls) -> None:
+        """
+        Adds player controls to Scene and updates them.
 
-    def render(self, screen: pygame.display, window_size: tuple[int], delta_time: float) -> None:
+        Args:
+            player_controls (PlayerControls): PlayerControls to add.
+        """
+
+        self.__player_controls.append(player_controls)
+
+    def render(self, screen: pygame.display, window_size: tuple[int], delta_time: float, pressed_keys: pygame.key.ScancodeWrapper) -> None:
         """
         Renders the scene. Called by Rengine.
 
@@ -68,9 +80,13 @@ class Scene:
             screen (display): Pygame screen.
             window_size (tuple[int]): Size of Pygame window.
             delta_time (float): The time from last frame.
+            pressed_keys (ScancodeWrapper): Currently pressed keys.
         """
 
         to_remove_game_objects: list = []
+
+        for player_controls in self.__player_controls:
+            player_controls.update(pressed_keys, delta_time)
 
         for game_object in self.__game_objects:
             if hasattr(game_object, "_animator"):
@@ -105,7 +121,7 @@ class Scene:
             screen.fill((0, 0, 0))
 
             for game_object in self.__game_objects:
-                if hasattr(game_object, "render") and callable(getattr(game_object, "render")):
+                if hasattr(game_object, "render") and callable(getattr(game_object, "render")) and not game_object.hidden:
                     game_object.render(screen, (game_object.x, game_object.y))
         else:
             self.camera._update_position_pivot(window_size)
@@ -119,10 +135,13 @@ class Scene:
                 self.camera.background_image.render(screen, (0, 0))
 
             for game_object in self.__game_objects:
-                if hasattr(game_object, "render") and callable(getattr(game_object, "render")):
+                if hasattr(game_object, "render") and callable(getattr(game_object, "render")) and not game_object.hidden:
                     in_bounds: bool = self.camera.is_game_object_in_bounds(game_object, window_size)
 
                     if not in_bounds:
                         continue
 
                     game_object.render(screen, self.camera.get_game_object_position(game_object))
+
+        if self.gui:
+            self.gui.render(screen, delta_time, window_size, pressed_keys)

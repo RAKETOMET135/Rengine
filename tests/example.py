@@ -44,7 +44,7 @@ def update(delta_time: float) -> None:
 engine: rengine.Rengine = rengine.Rengine(update_function=update, frames_per_second=120)
 # Adds scene to game instance
 engine.add_scene(main_scene)
-# Adds player controls to game instance
-engine.add_player_controls(player_controls)
+# Adds player controls to scene
+main_scene.add_player_controls(player_controls)
 # Runs game instance
 engine.run()

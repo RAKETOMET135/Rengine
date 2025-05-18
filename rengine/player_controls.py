@@ -181,4 +181,5 @@ class PlayerControls:
         self.__moving_down = is_move_down
         self.__moving_up = is_move_up
 
-        self.__handle_directional_movement_animations()
+        if self.__use_directional_movement_animations:
+            self.__handle_directional_movement_animations()

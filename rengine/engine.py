@@ -17,7 +17,7 @@ class Rengine:
             frames_per_second (int): How many game loop cycles runs every second.
         """
 
-        pygame.init()
+        Rengine.init()
         self.screen = pygame.display.set_mode((width, height))
         pygame.display.set_caption(title)
         self.clock = pygame.time.Clock()
@@ -89,16 +89,6 @@ class Rengine:
         """
 
         self.current_scene = scene
-    
-    def add_player_controls(self, player_controls: PlayerControls) -> None:
-        """
-        Adds player controls to Rengine and updates them.
-
-        Args:
-            player_controls (PlayerControls): PlayerControls to add.
-        """
-
-        self.player_controls.append(player_controls)
 
     def __get_pressed_keys_list(self, pressed_keys: pygame.key.ScancodeWrapper) -> list[str]:
         pressed_keys_list: list[str] = []
@@ -141,15 +131,19 @@ class Rengine:
 
             if self.update_function:
                 self.update_function(delta_time)
-            
-            for player_controls in self.player_controls:
-                player_controls.update(pressed_keys, delta_time)
 
             if self.current_scene:
-                self.current_scene.render(self.screen, (self.screen_width, self.screen_height), delta_time)
+                self.current_scene.render(self.screen, (self.screen_width, self.screen_height), delta_time, pressed_keys)
 
             pygame.display.update()
         
         pygame.quit()
     
+    @staticmethod
+    def init() -> None:
+        """
+        Initializes the Rengine.
+        """
+
+        pygame.init()
     

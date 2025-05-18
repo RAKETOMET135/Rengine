@@ -18,6 +18,7 @@ class GuiElement:
         self.z_index = 0
         self._main_rect = None
         self._hover_cursor = None
+        self._hover = False
     
     def adjust_draw_order(self, draw_order: int) -> None:
         """
@@ -79,7 +80,8 @@ class TextButton(GuiElement):
     def __init__(self, text: str, text_size: int, text_color: tuple[int] = (255, 255, 255), background_color: tuple[int] = (100, 100, 100), 
                 background_hover_color: tuple[int] = (150, 150, 150), hover_scale: float = 1, text_hover_scale: float = 1, border_radius: int = 0,
                 border_width: int = 0, border_color: tuple[int] = (0, 0, 0), background_transparency: float = 0, background_hover_transparency: float = 0,
-                on_left_click: Callable = None, on_right_click: Callable = None, on_middle_click: Callable = None, 
+                on_left_click: Callable = None, on_right_click: Callable = None, on_middle_click: Callable = None, on_hover_enter: Callable = None,
+                on_hover_exit: Callable = None,
                 font: str = None, x = 0, y = 0):
         """
         Creates instance of TextButton with text and a background.
@@ -100,16 +102,23 @@ class TextButton(GuiElement):
             on_left_click (Callable): Function that is called when left clicked.
             on_right_click (Callable): Function that is called when right clicked.
             on_middle_click (Callable): Function that is called when middle clicked.
+            on_hover_enter (Callable): Function that is called when TextButton is hovered.
+            on_hover_exit (Callable): Function that is called when TextButton is unhovered.
             font (str): Optional path to font file.
             x (int): Position of GuiElement on x axis.
             y (int): Position of GuiElement on y axis.
         """
+
+        x += int(text_size/4)
+        y += int(text_size/8)
 
         super().__init__(x, y)
 
         self.on_left_click = on_left_click
         self.on_right_click = on_right_click
         self.on_middle_click = on_middle_click
+        self.on_hover_enter = on_hover_enter
+        self.on_hover_exit = on_hover_exit
 
         self.background_transparency = int(255 - background_transparency * 255)
         self.background_hover_transparency = int(255 - background_hover_transparency * 255)
@@ -196,13 +205,168 @@ class TextButton(GuiElement):
         """
 
         if is_mouse_on:
-            pygame.draw.rect(screen, self.border_color, self._border_hover_rect, border_radius=self.border_radius, width=self.border_width)
+            pygame.draw.rect(screen, self.border_color, self._border_hover_rect, border_radius=self.border_radius, width=int(self.border_width))
             screen.blit(self._background_hover_surface, self._background_hover_rect)
             screen.blit(self._surface, self._hover_rect)
+
+            if not self._hover:
+                self._hover = True
+
+                if self.on_hover_enter:
+                    self.on_hover_enter()
         else:
-            pygame.draw.rect(screen, self.border_color, self._border_rect, border_radius=self.border_radius, width=self.border_width)
+            pygame.draw.rect(screen, self.border_color, self._border_rect, border_radius=self.border_radius, width=int(self.border_width))
             screen.blit(self.background_surface, self.background_rect)
             screen.blit(self.surface, self.rect)
+
+            if self._hover:
+                self._hover = False
+
+                if self.on_hover_exit:
+                    self.on_hover_exit()
+
+class Frame(GuiElement):
+    def __init__(self, x = 0, y = 0, width: int = 100, height: int = 100, background_color: tuple[int] = (255, 255, 255), background_transparency: float = 0,
+                 border_radius: int = 0, border_width: int = 0, border_color: tuple[int] = (255, 255, 255)):
+        """
+        Creates instance of Frame class with background.
+
+        Add GuiElements into frame for better workflow.
+
+        Args:
+            x (int): Position of GuiElement on x axis.
+            y (int): Position of GuiElement on y axis.
+            width (int): Frames's width.
+            height (int): Frame's height.
+            background_color (tuple[int]): Frame's background color.
+            background_transparency (float): Frame's background transparency. (0 - 1)
+            border_radius (int): Frame's border radius.
+            border_width (int): Frame's border width.
+            border_color (tuple[int]): Frame's border color.
+        """
+
+        super().__init__(x, y)
+
+        self.width = width
+        self.height = height
+        self.border_radius = border_radius
+        self.border_width = border_width
+        self.border_color = border_color
+        self.background_color = background_color
+        self.background_transparency = int(255 - (background_transparency * 255))
+        self.rect = pygame.rect.Rect(x, y, width, height)
+        self.surface = pygame.Surface((width, height), pygame.SRCALPHA)
+
+        pygame.draw.rect(self.surface,
+                         (self.background_color[0], self.background_color[1], self.background_color[2], self.background_transparency),
+                         (0, 0, self.rect.width, self.rect.height),
+                         border_radius=self.border_radius
+                         )
+
+        self._border_rect = pygame.rect.Rect(self.rect.x - int(border_width/2),
+                                             self.rect.y - int(border_width/2),
+                                             self.rect.width + border_width,
+                                             self.rect.height + border_width
+                                             )
+        
+        self._main_rect = self.rect
+        self.__elements = []
+    
+    def add_gui_element(self, gui_element) -> None:
+        """
+        Adds GuiElement into Frame. GuiElement will have (0, 0) on Frame's topleft corner.
+
+        Args:
+            gui_element (GuiElement): GuiElement to add to Frame.
+        """
+
+        self.__elements.append(gui_element)
+
+        gui_element._main_rect.topleft = (self.x + gui_element._main_rect.x, self.y + gui_element._main_rect.y)
+
+        if hasattr(gui_element, "_background_hover_rect"):
+            gui_element._background_hover_rect.topleft = (self.x + gui_element._background_hover_rect.x, self.y + gui_element._background_hover_rect.y)
+        
+        if hasattr(gui_element, "rect") and not type(gui_element) == TextLabel and not type(gui_element) == Frame:
+            gui_element.rect.topleft = (self.x + gui_element.rect.x, self.y + gui_element.rect.y)
+        
+        if hasattr(gui_element, "_hover_rect"):
+            gui_element._hover_rect.topleft = (self.x + gui_element._hover_rect.x, self.y + gui_element._hover_rect.y)
+        
+        if hasattr(gui_element, "_border_rect"):
+            gui_element._border_rect.topleft = (self.x + gui_element._border_rect.x, self.y + gui_element._border_rect.y)
+        
+        if hasattr(gui_element, "_border_hover_rect"):
+            gui_element._border_hover_rect.topleft = (self.x + gui_element._border_hover_rect.x, self.y + gui_element._border_hover_rect.y)
+        
+        if hasattr(gui_element, "render_content"):
+            gui_element.x = gui_element._main_rect.x
+            gui_element.y = gui_element._main_rect.y
+
+    def remove_gui_element(self, gui_element) -> None:
+        """
+        Removes GuiElement from Frame if it was added.
+
+        Args:
+            gui_element (GuiElement): GuiElement to remove from Frame.
+        """
+
+        if gui_element in self.__elements:
+            self.__elements.remove(gui_element)
+    
+    def render(self, screen: pygame.display, is_mouse_on: bool) -> None:
+        """
+        Renders the Frame onto screen.
+        """
+
+        pygame.draw.rect(screen, self.border_color, self._border_rect, border_radius=self.border_radius, width=int(self.border_width/2))
+        screen.blit(self.surface, self.rect)
+    
+    def render_content(self, screen: pygame.display, left_click: bool, right_click: bool, middle_click: bool) -> None:
+        """
+        Renders the Frame's content onto screen.
+        """
+
+        self.__elements.sort(key=lambda gui_element: gui_element.z_index)
+
+        to_display_cursor: int = pygame.SYSTEM_CURSOR_ARROW
+        z_index_cursor_request: int = -999999999
+
+        for element in self.__elements:
+            if element.hidden:
+                continue
+
+            is_mouse_on: bool = False
+
+            if element._main_rect.collidepoint(Input.mouse_pos):
+                if element._hover_cursor and element.z_index >= z_index_cursor_request:
+                    z_index_cursor_request = element.z_index
+                    to_display_cursor = element._hover_cursor
+                
+                if left_click:
+                    if hasattr(element, "left_click") and callable(getattr(element, "left_click")):
+                        element.left_click()
+                
+                if right_click:
+                    if hasattr(element, "right_click") and callable(getattr(element, "right_click")):
+                        element.right_click()
+                
+                if middle_click:
+                    if hasattr(element, "middle_click") and callable(getattr(element, "middle_click")):
+                        element.middle_click()
+                
+                is_mouse_on = True
+            
+            element.render(screen, is_mouse_on)
+
+            if hasattr(element, "render_content") and callable(getattr(element, "render_content")):
+                cursor = element.render_content(screen, left_click, right_click, middle_click)
+
+                if element.z_index >= z_index_cursor_request and not cursor == 0:
+                    z_index_cursor_request = element.z_index
+                    to_display_cursor = cursor
+        
+        return to_display_cursor
 
 class Gui:
     def __init__(self, scene):
@@ -268,11 +432,18 @@ class Gui:
                 
                 if middle_click:
                     if hasattr(element, "middle_click") and callable(getattr(element, "middle_click")):
-                        element.middle_click()
+                        element.middle_click()  
                 
                 is_mouse_on = True
-
+            
             element.render(screen, is_mouse_on)
+
+            if hasattr(element, "render_content") and callable(getattr(element, "render_content")):
+                cursor = element.render_content(screen, left_click, right_click, middle_click)
+
+                if element.z_index >= z_index_cursor_request and not cursor == 0:
+                    z_index_cursor_request = element.z_index
+                    to_display_cursor = cursor
         
         pygame.mouse.set_cursor(to_display_cursor)
         

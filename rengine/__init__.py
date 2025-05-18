@@ -7,8 +7,8 @@ from .camera import Camera
 from .collision import Collision
 from .input import Input
 from .animation import ImageAnimationTrack, ImageAnimator
-from .gui import Gui, GuiElement, TextLabel, TextButton, Frame
+from .gui import Gui, GuiElement, TextLabel, TextButton, Frame, HorizontalAlign, VerticalAlign
 
 __version__ = "0.1.0"
 __all__ = ["Rengine", "Rectangle", "Image", "Scene", "PlayerControls", "MovementType", "MovementControls", "Camera", "Collision", "Input", "ImageAnimationTrack",
-           "ImageAnimator", "MovementDirection", "Gui", "GuiElement", "TextLabel", "TextButton", "Frame"]
+           "ImageAnimator", "MovementDirection", "Gui", "GuiElement", "TextLabel", "TextButton", "Frame", "HorizontalAlign", "VerticalAlign"]

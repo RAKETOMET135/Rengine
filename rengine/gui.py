@@ -55,7 +55,8 @@ class GuiElement:
 
 class TextLabel(GuiElement):
     def __init__(self, text: str, text_size: int, text_color: tuple[int] = (255, 255, 255), font: str = None, x = 0, y = 0, 
-                 horizontal_align: HorizontalAlign = None, vertical_align: VerticalAlign = None):
+                 horizontal_align: HorizontalAlign = None, vertical_align: VerticalAlign = None,
+                 translation_x: int = 0, translation_y: int = 0):
         """
         Creates instance of TextLabel with text.
 
@@ -68,10 +69,14 @@ class TextLabel(GuiElement):
             y (int): Position of GuiElement on y axis.
             horizontal_align (HorizontalAlign): The horizontal alignment of TextLabel.
             vertical_align (VerticalAlign): The vertical alignment of TextLabel.
+            translation_x (int): The distance on x axis that this element will move from origin.
+            translation_y (int): The distance on y axis that this element will move from origin.
         """
 
         super().__init__(x, y)
         
+        self.translation_x = translation_x
+        self.translation_y = translation_y
         self.horizontal_align = horizontal_align
         self.vertical_align = vertical_align
         self.text = text
@@ -82,6 +87,31 @@ class TextLabel(GuiElement):
         self.surface = self.font.render(text, False, text_color)
         self.rect = self.surface.get_rect()
         self.rect.topleft = (x, y)
+
+        self._main_rect = self.rect
+        self.frame = None
+        self.__align_applied = False
+
+    def change_text(self, text: str = "", text_size: int = None) -> None:
+        """
+        Changes the TextLabel's text.
+
+        Text can not be changed using text attribute.
+
+        Args:
+            text (str): Text to set as the new text.
+            text_size (int): The new size of the text.
+        """
+
+        self.text_size = text_size
+
+        prev_rect_position: tuple[int] = self.rect.topleft
+
+        self.text = text
+        self.font = pygame.font.Font(self.font_path, self.text_size)
+        self.surface = self.font.render(text, False, self.text_color)
+        self.rect = self.surface.get_rect()
+        self.rect.topleft = prev_rect_position
 
         self._main_rect = self.rect
         self.__align_applied = False
@@ -122,7 +152,7 @@ class TextLabel(GuiElement):
             if self.horizontal_align or self.vertical_align:
                 self.apply_alignment(parent_coords)
 
-        screen.blit(self.surface, self.rect)
+        screen.blit(self.surface, (self.rect.x + self.translation_x, self.rect.y + self.translation_y, self.rect.width, self.rect.height))
 
 class TextButton(GuiElement):
     def __init__(self, text: str, text_size: int, text_color: tuple[int] = (255, 255, 255), background_color: tuple[int] = (100, 100, 100), 
@@ -130,6 +160,7 @@ class TextButton(GuiElement):
                 border_width: int = 0, border_color: tuple[int] = (0, 0, 0), background_transparency: float = 0, background_hover_transparency: float = 0,
                 on_left_click: Callable = None, on_right_click: Callable = None, on_middle_click: Callable = None, on_hover_enter: Callable = None,
                 on_hover_exit: Callable = None, horizontal_align: HorizontalAlign = None, vertical_align: VerticalAlign = None,
+                translation_x: int = 0, translation_y: int = 0,
                 font: str = None, x = 0, y = 0):
         """
         Creates instance of TextButton with text and a background.
@@ -154,6 +185,8 @@ class TextButton(GuiElement):
             on_hover_exit (Callable): Function that is called when TextButton is unhovered.
             horizontal_align (HorizontalAlign): The horizontal alignment of TextLabel.
             vertical_align (VerticalAlign): The vertical alignment of TextLabel.
+            translation_x (int): The distance on x axis that this element will move from origin.
+            translation_y (int): The distance on y axis that this element will move from origin.
             font (str): Optional path to font file.
             x (int): Position of GuiElement on x axis.
             y (int): Position of GuiElement on y axis.
@@ -163,7 +196,9 @@ class TextButton(GuiElement):
         y += int(text_size/8)
 
         super().__init__(x, y)
-
+        
+        self.translation_x = translation_x
+        self.translation_y = translation_y
         self.horizontal_align = horizontal_align
         self.vertical_align = vertical_align
 
@@ -173,6 +208,7 @@ class TextButton(GuiElement):
         self.on_hover_enter = on_hover_enter
         self.on_hover_exit = on_hover_exit
 
+        self.hover_scale = hover_scale
         self.background_transparency = int(255 - background_transparency * 255)
         self.background_hover_transparency = int(255 - background_hover_transparency * 255)
         self.border_color = border_color
@@ -227,7 +263,72 @@ class TextButton(GuiElement):
 
         self._main_rect = self.background_rect
         self._hover_cursor = pygame.SYSTEM_CURSOR_HAND
+        self.frame = None
 
+        self.__align_applied = False
+
+    def change_text(self, text: str = "", text_size: int = None) -> None:
+        """
+        Changes the TextButtons's text.
+
+        Text can not be changed using text attribute.
+
+        Args:
+            text (str): Text to set as the new text.
+            text_size (int): The new size of the text.
+        """
+
+        self.text_size = text_size
+
+        prev_rect_position: tuple[int] = self.rect.topleft
+
+        self.text = text
+        self.font = pygame.font.Font(self.font_path, self.text_size)
+        self.surface = self.font.render(text, False, self.text_color)
+        self.rect = self.surface.get_rect()
+        self.rect.topleft = prev_rect_position
+
+        x = self.rect.left
+        y = self.rect.top
+
+        self.background_rect = pygame.rect.Rect(int(x - self.text_size/4), int(y - self.text_size/8), self.rect.width + int(self.text_size/2), self.rect.height + int(self.text_size/4))
+        self.background_surface = pygame.Surface(self.background_rect.size, pygame.SRCALPHA)
+
+        pygame.draw.rect(self.background_surface, 
+                            (self.background_color[0], self.background_color[1], self.background_color[2], self.background_transparency), 
+                            (0, 0, self.background_rect.width, self.background_rect.height), 
+                            border_radius=self.border_radius)
+
+        self._background_hover_rect = pygame.rect.Rect(int(x - (self.text_size/4) * self.hover_scale), 
+                                                       int(y - (self.text_size/8) * self.hover_scale), 
+                                                       self.rect.width + int((self.text_size/2) * self.hover_scale), 
+                                                       self.rect.height + int((self.text_size/4) * self.hover_scale))
+        self._background_hover_surface = pygame.Surface(self._background_hover_rect.size, pygame.SRCALPHA)
+
+        pygame.draw.rect(self._background_hover_surface,
+                         (self.background_hover_color[0], self.background_hover_color[1], self.background_hover_color[2], self.background_hover_transparency),
+                         (0, 0, self._background_hover_rect.width, self._background_hover_rect.height),
+                         border_radius=self.border_radius
+                         )
+        
+        self._font = pygame.font.Font(self.font_path, int(self.text_size))
+        self._surface = self._font.render(text, False, self.text_color)
+        self._hover_rect = self._surface.get_rect()
+        self._hover_rect.center = self._background_hover_rect.center
+
+        self._border_rect = pygame.rect.Rect(self.background_rect.x - int(self.border_width/2),
+                                             self.background_rect.y - int(self.border_width/2),
+                                             self.background_rect.width + self.border_width,
+                                             self.background_rect.height + self.border_width
+                                             )
+        
+        self._border_hover_rect = pygame.rect.Rect(self._background_hover_rect.x - int(self.border_width/2),
+                                                self._background_hover_rect.y - int(self.border_width/2),
+                                                self._background_hover_rect.width + self.border_width,
+                                                self._background_hover_rect.height + self.border_width
+                                                )
+
+        self._main_rect = self.background_rect
         self.__align_applied = False
 
     def left_click(self) -> None:
@@ -236,7 +337,7 @@ class TextButton(GuiElement):
         """
 
         if self.on_left_click:
-            self.on_left_click()
+            self.on_left_click(self)
     
     def right_click(self) -> None:
         """
@@ -244,7 +345,7 @@ class TextButton(GuiElement):
         """
 
         if self.on_right_click:
-            self.on_right_click()
+            self.on_right_click(self)
     
     def middle_click(self) -> None:
         """
@@ -252,7 +353,7 @@ class TextButton(GuiElement):
         """
 
         if self.on_middle_click:
-            self.on_middle_click()
+            self.on_middle_click(self)
 
     def apply_alignment(self, parent_coords: tuple[int]) -> None:
         """
@@ -353,30 +454,30 @@ class TextButton(GuiElement):
                 self.apply_alignment(parent_coords)
 
         if is_mouse_on:
-            pygame.draw.rect(screen, self.border_color, self._border_hover_rect, border_radius=self.border_radius, width=int(self.border_width))
-            screen.blit(self._background_hover_surface, self._background_hover_rect)
-            screen.blit(self._surface, self._hover_rect)
+            pygame.draw.rect(screen, self.border_color, (self._border_hover_rect.x + self.translation_x, self._border_hover_rect.y + self.translation_y, self._border_hover_rect.width, self._border_hover_rect.height), border_radius=self.border_radius, width=int(self.border_width))
+            screen.blit(self._background_hover_surface, (self._background_hover_rect.x + self.translation_x, self._background_hover_rect.y + self.translation_y, self._background_hover_rect.width, self._background_hover_rect.height))
+            screen.blit(self._surface, (self._hover_rect.x + self.translation_x, self._hover_rect.y + self.translation_y, self._hover_rect.width, self._hover_rect.height))
 
             if not self._hover:
                 self._hover = True
 
                 if self.on_hover_enter:
-                    self.on_hover_enter()
+                    self.on_hover_enter(self)
         else:
-            pygame.draw.rect(screen, self.border_color, self._border_rect, border_radius=self.border_radius, width=int(self.border_width))
-            screen.blit(self.background_surface, self.background_rect)
-            screen.blit(self.surface, self.rect)
+            pygame.draw.rect(screen, self.border_color, (self._border_rect.x + self.translation_x, self._border_rect.y + self.translation_y, self._border_rect.width, self._border_rect.height), border_radius=self.border_radius, width=int(self.border_width))
+            screen.blit(self.background_surface, (self.background_rect.x + self.translation_x, self.background_rect.y + self.translation_y, self.background_rect.width, self.background_rect.height))
+            screen.blit(self.surface, (self.rect.x + self.translation_x, self.rect.y + self.translation_y, self.rect.width, self.rect.height))
 
             if self._hover:
                 self._hover = False
 
                 if self.on_hover_exit:
-                    self.on_hover_exit()
+                    self.on_hover_exit(self)
 
 class Frame(GuiElement):
     def __init__(self, x = 0, y = 0, width: int = 100, height: int = 100, background_color: tuple[int] = (255, 255, 255), background_transparency: float = 0,
                  border_radius: int = 0, border_width: int = 0, border_color: tuple[int] = (255, 255, 255),
-                 horizontal_align: HorizontalAlign = None, vertical_align: VerticalAlign = None):
+                 horizontal_align: HorizontalAlign = None, vertical_align: VerticalAlign = None, translation_x: int = 0, translation_y: int = 0):
         """
         Creates instance of Frame class with background.
 
@@ -394,12 +495,19 @@ class Frame(GuiElement):
             border_color (tuple[int]): Frame's border color.
             horizontal_align (HorizontalAlign): The horizontal alignment of TextLabel.
             vertical_align (VerticalAlign): The vertical alignment of TextLabel.
+            translation_x (int): The distance on x axis that this element will move from origin.
+            translation_y (int): The distance on y axis that this element will move from origin.
         """
 
         super().__init__(x, y)
 
+        self.translation_x = translation_x
+        self.translation_y = translation_y
         self.horizontal_align = horizontal_align
         self.vertical_align = vertical_align
+
+        self.x = x + translation_x
+        self.y = y + translation_y
 
         self.width = width
         self.height = height
@@ -408,7 +516,7 @@ class Frame(GuiElement):
         self.border_color = border_color
         self.background_color = background_color
         self.background_transparency = int(255 - (background_transparency * 255))
-        self.rect = pygame.rect.Rect(x, y, width, height)
+        self.rect = pygame.rect.Rect(x + self.translation_x, y + self.translation_y, width, height)
         self.surface = pygame.Surface((width, height), pygame.SRCALPHA)
 
         pygame.draw.rect(self.surface,
@@ -426,6 +534,7 @@ class Frame(GuiElement):
         self._main_rect = self.rect
         self.__elements = []
         self.__align_applied = False
+        self.frame = None
     
     def add_gui_element(self, gui_element) -> None:
         """
@@ -436,6 +545,8 @@ class Frame(GuiElement):
         """
 
         self.__elements.append(gui_element)
+
+        gui_element.frame = self
         
         gui_element._main_rect.topleft = (self.x + gui_element._main_rect.x, self.y + gui_element._main_rect.y)
 
@@ -514,6 +625,8 @@ class Frame(GuiElement):
 
         if gui_element in self.__elements:
             self.__elements.remove(gui_element)
+
+            gui_element.frame = None
     
     def apply_alignment(self, parent_coords: tuple[int]) -> None:
         """
@@ -540,17 +653,17 @@ class Frame(GuiElement):
 
         match self.horizontal_align:
             case HorizontalAlign.LEFT:
-                self._main_rect.x = parent_coords[0]
-                self._border_rect.x = parent_coords[0] - int(self.border_width / 2)
-                self.x = parent_coords[0]
+                self._main_rect.x = parent_coords[0] + self.translation_x
+                self._border_rect.x = parent_coords[0] - int(self.border_width / 2) + self.translation_x
+                self.x = parent_coords[0] + self.translation_x
             case HorizontalAlign.RIGHT:
-                self._main_rect.x = parent_coords[0] + parent_coords[2] - self._main_rect.width
-                self._border_rect.x = parent_coords[0] + parent_coords[2] - self._main_rect.width - int(self.border_width / 2)
-                self.x = parent_coords[0] + parent_coords[2] - self._main_rect.width
+                self._main_rect.x = parent_coords[0] + parent_coords[2] - self._main_rect.width + self.translation_x
+                self._border_rect.x = parent_coords[0] + parent_coords[2] - self._main_rect.width - int(self.border_width / 2) + self.translation_x
+                self.x = parent_coords[0] + parent_coords[2] - self._main_rect.width + self.translation_x
             case HorizontalAlign.CENTER:
-                self._main_rect.x = parent_coords[0] + int(parent_coords[2] / 2 - self._main_rect.width / 2)
-                self._border_rect.x = parent_coords[0] + int(parent_coords[2] / 2 - self._main_rect.width / 2 - self.border_width / 2)
-                self.x = parent_coords[0] + int(parent_coords[2] / 2 - self._main_rect.width / 2)
+                self._main_rect.x = parent_coords[0] + int(parent_coords[2] / 2 - self._main_rect.width / 2) + self.translation_x
+                self._border_rect.x = parent_coords[0] + int(parent_coords[2] / 2 - self._main_rect.width / 2 - self.border_width / 2) + self.translation_x
+                self.x = parent_coords[0] + int(parent_coords[2] / 2 - self._main_rect.width / 2) + self.translation_x
             case _:
                 pass
 
@@ -572,17 +685,17 @@ class Frame(GuiElement):
         
         match self.vertical_align:
             case VerticalAlign.TOP:
-                self._main_rect.y = parent_coords[1]
-                self._border_rect.y = parent_coords[1] - int(self.border_width / 2)
-                self.y = parent_coords[1]
+                self._main_rect.y = parent_coords[1] + self.translation_y
+                self._border_rect.y = parent_coords[1] - int(self.border_width / 2) + self.translation_y
+                self.y = parent_coords[1] + self.translation_y
             case VerticalAlign.BOTTOM:
-                self._main_rect.y = parent_coords[1] + parent_coords[3] - self._main_rect.height
-                self._border_rect.y = parent_coords[1] + parent_coords[3] - self._main_rect.height - int(self.border_width / 2)
-                self.y = parent_coords[1] + parent_coords[3] - self._main_rect.height
+                self._main_rect.y = parent_coords[1] + parent_coords[3] - self._main_rect.height + self.translation_y
+                self._border_rect.y = parent_coords[1] + parent_coords[3] - self._main_rect.height - int(self.border_width / 2) + self.translation_y
+                self.y = parent_coords[1] + parent_coords[3] - self._main_rect.height + self.translation_y
             case VerticalAlign.CENTER:
-                self._main_rect.y = parent_coords[1] + int(parent_coords[3] / 2 - self._main_rect.height / 2)
-                self._border_rect.y = parent_coords[1] + int(parent_coords[3] / 2 - self._main_rect.height / 2 - self.border_width / 2)
-                self.y = parent_coords[1] + int(parent_coords[3] / 2 - self._main_rect.height / 2)
+                self._main_rect.y = parent_coords[1] + int(parent_coords[3] / 2 - self._main_rect.height / 2) + self.translation_y
+                self._border_rect.y = parent_coords[1] + int(parent_coords[3] / 2 - self._main_rect.height / 2 - self.border_width / 2) + self.translation_y
+                self.y = parent_coords[1] + int(parent_coords[3] / 2 - self._main_rect.height / 2) + self.translation_y
             case _:
                 pass
         
@@ -621,7 +734,7 @@ class Frame(GuiElement):
 
             is_mouse_on: bool = False
 
-            if element._main_rect.collidepoint(Input.mouse_pos):
+            if pygame.rect.Rect(element._main_rect.x + element.translation_x, element._main_rect.y + element.translation_y, element._main_rect.width, element._main_rect.height).collidepoint(Input.mouse_pos):
                 if element._hover_cursor and element.z_index >= z_index_cursor_request:
                     z_index_cursor_request = element.z_index
                     to_display_cursor = element._hover_cursor
@@ -700,7 +813,7 @@ class Gui:
             
             is_mouse_on: bool = False
 
-            if element._main_rect.collidepoint(Input.mouse_pos):
+            if pygame.rect.Rect(element._main_rect.x + element.translation_x, element._main_rect.y + element.translation_y, element._main_rect.width, element._main_rect.height).collidepoint(Input.mouse_pos):
                 if element._hover_cursor and element.z_index >= z_index_cursor_request:
                     z_index_cursor_request = element.z_index
                     to_display_cursor = element._hover_cursor

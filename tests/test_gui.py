@@ -12,6 +12,10 @@ example2_text: rengine.TextLabel = rengine.TextLabel("example", 25, (255, 0, 0),
 example2_text.add_to_gui(main_gui)
 example2_text.adjust_draw_order(-1)
 
+test_input: rengine.TextInput = rengine.TextInput(text="R", placeholder_text="test", border_radius=10, border_color=(255, 255, 255), border_width=2,
+                                                  horizontal_align=rengine.HorizontalAlign.LEFT, vertical_align=rengine.VerticalAlign.TOP)
+test_input.add_to_gui(main_gui)
+
 frame: rengine.Frame = rengine.Frame(400, 100, width=300, height=400, background_color=(50, 255, 50), background_transparency=0.5,
                                      border_width=4, horizontal_align=rengine.HorizontalAlign.CENTER, vertical_align=rengine.VerticalAlign.CENTER,
                                      translation_x=150, translation_y=50)

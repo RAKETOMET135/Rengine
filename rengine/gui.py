@@ -103,7 +103,8 @@ class TextLabel(GuiElement):
             text_size (int): The new size of the text.
         """
 
-        self.text_size = text_size
+        if text_size:
+            self.text_size = text_size
 
         prev_rect_position: tuple[int] = self.rect.topleft
 
@@ -154,6 +155,349 @@ class TextLabel(GuiElement):
 
         screen.blit(self.surface, (self.rect.x + self.translation_x, self.rect.y + self.translation_y, self.rect.width, self.rect.height))
 
+class TextInput(GuiElement):
+    def __init__(self, text: str = "", placeholder_text: int = "", text_color: tuple[int] = (255, 255, 255), placeholder_text_color: tuple[int] = (200, 200, 200),
+                 background_color: tuple[int] = (100, 100, 100), border_radius: int = 0, font: str = None, border_width: int = 0, border_color: tuple[int] = (0, 0, 0),
+                 background_transparency: int = 0, text_size: int = 25, input_width: int = 150, input_height: int = 30,
+                 horizontal_align: HorizontalAlign = None, vertical_align: VerticalAlign = None, translation_x: int = 0, translation_y: int = 0,
+                x: int = 0, y: int = 0):
+        """
+        Creates instance of TextInput with placeholder text and a background.
+
+        Args:
+            text (str): Text that is already typed in the input.
+            placeholder_text (str): Text to display when input is empty.
+            text_color (tuple[int]): Color of the displayed text.
+            placeholder_text_color (tuple[int]): Color of placeholder text.
+            background_color (tuple[int]): Color of the background.
+            border_radius (int): The border radius of TextInput.
+            font (str): Optional path to font file.
+            border_width (int): The width of the border.
+            border_color (tuple[int]): The color of the border.
+            background_transparency (int): The transparency of the background. (0 - 1)
+            text_size (int): The size of the text.
+            input_width (int): The width of the TextInput. This GuiElement is not sizing based on text.
+            input_height (int): The height of TextInput. This GuiElement is not sizing based on text.
+            horizontal_align (HorizontalAlign): The horizontal alignment of TextInput.
+            vertical_align (VerticalAlign): The vertical alignment of TextInput.
+            translation_x (int): The distance on x axis that this element will move from origin.
+            translation_y (int): The distance on y axis that this element will move from origin.
+            x (int): Position of GuiElement on x axis.
+            y (int): Position of GuiElement on y axis.
+        """
+
+        super().__init__(x, y)
+
+        self.x = x
+        self.y = y
+
+        self.translation_x = translation_x
+        self.translation_y = translation_y
+        self.horizontal_align = horizontal_align
+        self.vertical_align = vertical_align
+
+        self.background_transparency = int(255 - background_transparency * 255)
+        self.border_color = border_color
+        self.border_width = border_width
+        self.border_radius = border_radius
+        self.text = text
+        self.placeholder_text = placeholder_text
+        self.text_size = text_size
+        self.text_color = text_color
+        self.placeholder_text_color = placeholder_text_color
+        self.font_path = font
+        self.font = pygame.font.Font(self.font_path, self.text_size)
+        self.background_color = background_color
+        self.width = input_width
+        self.height = input_height
+        self.background_rect = pygame.rect.Rect(x, y, input_width, input_height)
+        self.background_surface = pygame.Surface(self.background_rect.size, pygame.SRCALPHA)
+        pygame.draw.rect(self.background_surface, 
+                        (self.background_color[0], self.background_color[1], self.background_color[2], self.background_transparency), 
+                        (0, 0, self.background_rect.width, self.background_rect.height), 
+                        border_radius=self.border_radius)
+        self.border_rect = pygame.rect.Rect(self.background_rect.x - int(border_width/2),
+                                            self.background_rect.y - int(border_width/2),
+                                            self.background_rect.width + border_width,
+                                            self.background_rect.height + border_width
+                                            )
+
+        self._main_rect = self.background_rect
+        self._hover_cursor = pygame.SYSTEM_CURSOR_IBEAM
+        self.frame = None
+        self._input = text
+        self.input_surface = None
+        self.input_rect = None
+        self.line_rect = pygame.rect.Rect(0, 0, 2, self.font.get_height())
+        self.line_pos = -1
+        self._update_text()
+        self.placeholder_surface = self.font.render(self.placeholder_text, False, self.placeholder_text_color)
+        self.placeholder_rect = self.placeholder_surface.get_rect()
+        self.placeholder_rect.x = int(self.background_rect.x + self.background_rect.width/2 - self.placeholder_rect.width/2)
+        self.placeholder_rect.y = int(self.background_rect.y + self.background_rect.height/2 - self.placeholder_rect.height/2)
+        self.focused = False
+        self.remove_delay = 0
+        self.move_delay = 0
+        self.line_blink_delay = 0
+
+        self.__align_applied = False
+
+    def _get_line_position(self) -> int:
+        """
+        Returns a position on x axis for line to position in string.
+
+        Returns:
+            int: X axis position in string based on line position.
+        """
+
+        move: int = 0
+
+        for i in range(self.line_pos):
+            if i > len(self.input) - 1:
+                return move
+            
+            letter: str = self.input[i]
+            size: tuple[int] = self.font.size(letter)
+
+            move += size[0]
+
+        return move
+
+    def _change_line_pos_based_on_click(self, mouse_pos: tuple[int]) -> None:
+        """
+        Changes the line position index to mouse position letter.
+
+        Args:
+            mouse_pos (tuple[int]): The position of the mouse.
+        """
+
+        move: int = self.input_rect.x
+
+        if mouse_pos[0] <= move:
+            self.line_pos = 0
+
+            return
+
+        for i in range(len(self.input)):
+            letter: str = self.input[i]
+            size: tuple[int] = self.font.size(letter)
+
+            if i < len(self.input) -1:
+                next_letter: str = self.input[i + 1]
+                next_size: tuple[int] = self.font.size(next_letter)
+
+                if mouse_pos[0] > next_size[0] + move:
+                    move += size[0]
+
+                    continue
+                else:
+                    distance_1: int = abs(size[0] + move - mouse_pos[0])
+                    distance_2: int = abs(next_size[0] + move - mouse_pos[0])
+
+                    if distance_1 < distance_2:
+                        self.line_pos = i + 1
+                    else:
+                        self.line_pos = i + 1
+                    
+                    break
+            else:
+                self.line_pos = -1
+
+    def _update_text(self) -> None:
+        """
+        Changes the displayed text in TextInput and centers it.
+        """
+
+        self.input_surface = self.font.render(self.input, False, self.text_color)
+        self.input_rect = self.input_surface.get_rect()
+        self.input_rect.x = int(self.background_rect.x + self.background_rect.width/2 - self.input_rect.width/2)
+        self.input_rect.y = int(self.background_rect.y + self.background_rect.height/2 - self.input_rect.height/2)
+
+        if self.line_pos == -1:
+            self.line_rect.x = self.input_rect.x + self.input_rect.width
+        else:
+            self.line_rect.x = self.input_rect.x + self._get_line_position()
+
+        self.line_rect.y = self.input_rect.y
+
+    def _update_placeholder(self) -> None:
+        """
+        Changes the displayd placeholder text in TextInput and centers it.
+        """
+
+        self.placeholder_surface = self.font.render(self.placeholder_text, False, self.placeholder_text_color)
+        self.placeholder_rect = self.placeholder_surface.get_rect()
+        self.placeholder_rect.x = int(self.background_rect.x + self.background_rect.width/2 - self.placeholder_rect.width/2)
+        self.placeholder_rect.y = int(self.background_rect.y + self.background_rect.height/2 - self.placeholder_rect.height/2)
+    
+    def apply_alignment(self, parent_coords: tuple[int]) -> None:
+        """
+        Applies the horizontal alignment to the GuiElement. Called on first render.
+        """
+
+        if self.horizontal_align == HorizontalAlign.LEFT:
+            parent_coords = (
+                parent_coords[0] + int(self.border_width / 2),
+                parent_coords[1],
+                parent_coords[2],
+                parent_coords[3]
+            )
+        
+        if self.horizontal_align == HorizontalAlign.RIGHT:
+            parent_coords = (
+                parent_coords[0] - int(self.border_width / 2),
+                parent_coords[1],
+                parent_coords[2],
+                parent_coords[3]
+            )
+        
+        match self.horizontal_align:
+            case HorizontalAlign.LEFT:
+                self._main_rect.x = parent_coords[0]
+                self.border_rect.x = parent_coords[0] - int(self.border_width/2)
+            case HorizontalAlign.RIGHT:
+                self._main_rect.x = parent_coords[0] + parent_coords[2] - self._main_rect.width
+                self.border_rect.x = parent_coords[0] + parent_coords[2] - self._main_rect.width - int(self.border_width/2)
+            case HorizontalAlign.CENTER:
+                self._main_rect.x = parent_coords[0] + int(parent_coords[2] / 2 - self._main_rect.width / 2)
+                self.border_rect.x = parent_coords[0] + int(parent_coords[2] / 2 - self._main_rect.width / 2 - self.border_width/2)
+            case _:
+                pass
+        
+        if self.vertical_align == VerticalAlign.BOTTOM:
+            parent_coords = (
+                parent_coords[0],
+                parent_coords[1] - int(self.border_width / 2),
+                parent_coords[2],
+                parent_coords[3]
+            )
+        
+        if self.vertical_align == VerticalAlign.TOP:
+            parent_coords = (
+                parent_coords[0],
+                parent_coords[1] + int(self.border_width / 2),
+                parent_coords[2],
+                parent_coords[3]
+            )
+        
+        match self.vertical_align:
+            case VerticalAlign.TOP:
+                self._main_rect.y = parent_coords[1]
+                self.border_rect.y = parent_coords[1] - int(self.border_width/2)
+            case VerticalAlign.BOTTOM:
+                self._main_rect.y = parent_coords[1] + parent_coords[3] - self._main_rect.height
+                self.border_rect.y = parent_coords[1] + parent_coords[3] - self._main_rect.height - int(self.border_width/2)
+            case VerticalAlign.CENTER:
+                self._main_rect.y = parent_coords[1] + int(parent_coords[3] / 2 - self._main_rect.height / 2)
+                self.border_rect.y = parent_coords[1] + int(parent_coords[3] / 2 - self._main_rect.height / 2 - self.border_width/2)
+        
+        self._update_text()
+        self._update_placeholder()
+
+    def left_click(self) -> None:
+        """
+        Called by Gui on left click.
+        """
+
+        self.focused = True
+
+    def render(self, screen: pygame.display, is_mouse_on: bool, parent_coords: tuple[int]) -> None:
+        """
+        Renders TextInput onto screen.
+        """
+
+        if not self.__align_applied:
+            self.__align_applied = True
+
+            if self.horizontal_align or self.vertical_align:
+                self.apply_alignment(parent_coords)
+
+        if Input.is_left_mouse_button_click() and not is_mouse_on:
+            self.focused = False
+
+        if self.focused:
+            for char in Input._key_down_unicode:
+                if char == "":
+                    continue
+
+                if self.line_pos == -1:
+                    self._input += char
+                else:
+                    self._input = self._input[:self.line_pos] + char + self._input[self.line_pos:]
+                    self.line_pos += 1
+                    self.move_delay = 3
+            
+            if pygame.K_BACKSPACE in Input._key_downs_h and self.remove_delay <= 0:
+                self.remove_delay = 3
+
+                if self.line_pos == -1:
+                    self._input = self._input[:-1]
+                else:
+                    self._input = self._input[:self.line_pos - 1] + self._input[self.line_pos:]
+                    self.line_pos -= 1
+                    self.move_delay = 3
+
+            self._update_text()
+
+            if Input.is_left_mouse_button_click():
+                mouse_pos: tuple[int] = Input.mouse_pos
+
+                self._change_line_pos_based_on_click(mouse_pos)
+
+            if pygame.K_LEFT in Input._key_downs and self.move_delay <= 0:
+                self.move_delay = 3
+                
+                if self.line_pos == -1:
+                    self.line_pos = len(self.input) - 1
+                else:
+                    self.line_pos -= 1
+            
+            if pygame.K_RIGHT in Input._key_downs and self.move_delay <= 0:
+                self.move_delay = 3
+
+                if self.line_pos == -1:
+                    self.line_pos = 0
+                elif self.line_pos == len(self.input) - 1:
+                    self.line_pos = -1
+                else:
+                    self.line_pos += 1
+        
+        self.remove_delay -= 1
+        self.move_delay -= 1
+
+        pygame.draw.rect(screen, self.border_color, (self.border_rect.x + self.translation_x, self.border_rect.y + self.translation_y, self.border_rect.width, self.border_rect.height), border_radius=self.border_radius, width=int(self.border_width))
+        screen.blit(self.background_surface, (self.background_rect.x + self.translation_x, self.background_rect.y + self.translation_y, self.background_rect.width, self.background_rect.height))
+
+        if self.input_surface and self.input_rect and self.input:
+            screen.blit(self.input_surface, (self.input_rect.x + self.translation_x, self.input_rect.y + self.translation_y, self.input_rect.width, self.input_rect.height))
+
+            if self.focused:
+                if self.line_blink_delay <= 24:
+                    pygame.draw.rect(screen, (255, 255, 255), self.line_rect)
+
+                    if self.line_blink_delay <= 0:
+                        self.line_blink_delay = 48
+                
+                self.line_blink_delay -= 1
+        else:
+            screen.blit(self.placeholder_surface, (self.placeholder_rect.x + self.translation_x, self.placeholder_rect.y + self.translation_y, self.placeholder_rect.width, self.placeholder_rect.height))
+
+    @property
+    def input(self) -> str:
+        return self._input
+    
+    @input.setter
+    def input(self, new_input: str) -> None:
+        """
+        Use this property to change input text.
+
+        Args:
+            new_input (str): The new input text to change to.
+        """
+
+        self._input = new_input
+        self._update_text()
+
 class TextButton(GuiElement):
     def __init__(self, text: str, text_size: int, text_color: tuple[int] = (255, 255, 255), background_color: tuple[int] = (100, 100, 100), 
                 background_hover_color: tuple[int] = (150, 150, 150), hover_scale: float = 1, border_radius: int = 0,
@@ -161,7 +505,7 @@ class TextButton(GuiElement):
                 on_left_click: Callable = None, on_right_click: Callable = None, on_middle_click: Callable = None, on_hover_enter: Callable = None,
                 on_hover_exit: Callable = None, horizontal_align: HorizontalAlign = None, vertical_align: VerticalAlign = None,
                 translation_x: int = 0, translation_y: int = 0,
-                font: str = None, x = 0, y = 0):
+                font: str = None, x: int = 0, y: int = 0):
         """
         Creates instance of TextButton with text and a background.
 
@@ -278,7 +622,8 @@ class TextButton(GuiElement):
             text_size (int): The new size of the text.
         """
 
-        self.text_size = text_size
+        if text_size:
+            self.text_size = text_size
 
         prev_rect_position: tuple[int] = self.rect.topleft
 
@@ -562,12 +907,19 @@ class Frame(GuiElement):
         if hasattr(gui_element, "_border_rect"):
             gui_element._border_rect.topleft = (self.x + gui_element._border_rect.x, self.y + gui_element._border_rect.y)
         
+        if hasattr(gui_element, "border_rect"):
+            gui_element.border_rect.topleft = (self.x + gui_element.border_rect.x, self.y + gui_element.border_rect.y)
+
         if hasattr(gui_element, "_border_hover_rect"):
             gui_element._border_hover_rect.topleft = (self.x + gui_element._border_hover_rect.x, self.y + gui_element._border_hover_rect.y)
         
         if hasattr(gui_element, "render_content"):
             gui_element.x = gui_element._main_rect.x
             gui_element.y = gui_element._main_rect.y
+        
+        if hasattr(gui_element, "input_surface"):
+            gui_element._update_text()
+            gui_element._update_placeholder()
     
     def _align_gui_element_to_frame(self, gui_element, move: tuple[int]) -> None:
         """
@@ -590,6 +942,9 @@ class Frame(GuiElement):
         
         if hasattr(gui_element, "_border_rect"):
             gui_element._border_rect.topleft = (gui_element._border_rect.x + move[0], gui_element._border_rect.y + move[1])
+        
+        if hasattr(gui_element, "border_rect"):
+            gui_element.border_rect.topleft = (gui_element.border_rect.x + move[0], gui_element.border_rect.y + move[1])
         
         if hasattr(gui_element, "_border_hover_rect"):
             gui_element._border_hover_rect.topleft = (gui_element._border_hover_rect.x + move[0], gui_element._border_hover_rect.y + move[1])

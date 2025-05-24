@@ -34,6 +34,7 @@ class Input:
     _key_ups: list = []
     _key_downs_h: list = []
     _key_clicks: list = []
+    _key_down_unicode: list = []
     
     @classmethod
     def is_left_mouse_button_down(cls) -> bool:
@@ -335,6 +336,7 @@ class Input:
         cls._key_downs = []
         cls._key_ups = []
         cls._key_clicks = []
+        cls._key_down_unicode = []
 
         for event in cls._events:
             if event.type == pygame.MOUSEBUTTONDOWN:
@@ -402,6 +404,7 @@ class Input:
             elif event.type == pygame.KEYDOWN:
                 cls._key_downs.append(event.key)
                 cls._key_downs_h.append(event.key)
+                cls._key_down_unicode.append(event.unicode)
             elif event.type == pygame.KEYUP:
                 cls._key_ups.append(event.key)
                 
